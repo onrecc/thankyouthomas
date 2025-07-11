@@ -54,16 +54,30 @@ export async function GET(request: NextRequest) {
 
     messages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: true, 
       messages 
     })
+
+    // FORCE NO CACHING for admin data
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    
+    return response
     
   } catch (error) {
     console.error('Error fetching admin messages:', error)
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { success: false, error: 'Failed to fetch messages' },
       { status: 500 }
     )
+    
+    // No caching for errors either
+    errorResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    errorResponse.headers.set('Pragma', 'no-cache')
+    errorResponse.headers.set('Expires', '0')
+    
+    return errorResponse
   }
 }

@@ -42,7 +42,15 @@ export default function Page() {
 
   const fetchApprovedMessages = async () => {
     try {
-      const response = await fetch('/api/approved-messages')
+      // Add timestamp to bypass cache
+      const timestamp = new Date().getTime()
+      const response = await fetch(`/api/approved-messages?t=${timestamp}`, {
+        cache: 'no-store', // Force no caching
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
       const data = await response.json()
       
       if (data.success) {

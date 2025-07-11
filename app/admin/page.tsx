@@ -231,7 +231,15 @@ export default function AdminPanel() {
   const fetchMessages = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/admin/messages')
+      // Add timestamp to bypass cache
+      const timestamp = new Date().getTime()
+      const response = await fetch(`/api/admin/messages?t=${timestamp}`, {
+        cache: 'no-store', // Force no caching
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
       const data = await response.json()
 
       if (data.success) {
