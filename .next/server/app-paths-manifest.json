@@ -1,1 +1,19 @@
-{}
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/admin/approve/[id]/route": "app/api/admin/approve/[id]/route.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/admin/logout/route": "app/api/admin/logout/route.js",
+  "/api/admin/approve/route": "app/api/admin/approve/route.js",
+  "/api/admin/reject/route": "app/api/admin/reject/route.js",
+  "/api/admin/auth/route": "app/api/admin/auth/route.js",
+  "/api/admin/test-rejection-email/route": "app/api/admin/test-rejection-email/route.js",
+  "/api/admin/test-email/route": "app/api/admin/test-email/route.js",
+  "/api/approve-message/route": "app/api/approve-message/route.js",
+  "/page": "app/page.js",
+  "/form/page": "app/form/page.js",
+  "/api/submit-message/route": "app/api/submit-message/route.js",
+  "/api/admin/messages/route": "app/api/admin/messages/route.js",
+  "/api/admin/force-refresh/route": "app/api/admin/force-refresh/route.js",
+  "/api/force-refresh/route": "app/api/force-refresh/route.js",
+  "/api/approved-messages/route": "app/api/approved-messages/route.js"
+}

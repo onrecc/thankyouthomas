@@ -176,10 +176,10 @@ export default function Page() {
               }
             }}
             disabled={loading}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg border-2 border-red-500 transition-all duration-200 hover:scale-105 cursor-pointer text-sm flex items-center gap-2"
+            className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg border-2 border-green-500 transition-all duration-200 hover:scale-105 cursor-pointer text-sm flex items-center gap-2"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'FORCE REFRESHING...' : '🔥 FORCE REFRESH'}
+            {loading ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
 

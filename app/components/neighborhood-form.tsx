@@ -25,6 +25,39 @@ export default function NeighborhoodForm() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Helper function to convert image to PNG
+  const convertImageToPNG = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new window.Image()
+      
+      img.onload = () => {
+        canvas.width = img.width
+        canvas.height = img.height
+        ctx?.drawImage(img, 0, 0)
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const pngFile = new File([blob], `${file.name.split('.')[0]}.png`, {
+              type: 'image/png',
+              lastModified: Date.now()
+            })
+            resolve(pngFile)
+          } else {
+            resolve(file) // Fallback to original file if conversion fails
+          }
+        }, 'image/png', 0.9)
+      }
+      
+      img.onerror = () => {
+        resolve(file) // Fallback to original file if loading fails
+      }
+      
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -37,10 +70,14 @@ export default function NeighborhoodForm() {
       formDataToSend.append('message', formData.message)
       formDataToSend.append('isAnonymous', formData.isAnonymous.toString())
       
-      // Add images if any
+      // Add images if any - convert to PNG first
       if (formData.images && formData.images.length > 0) {
+        console.log('Converting images to PNG format...')
         for (let i = 0; i < formData.images.length; i++) {
-          formDataToSend.append('images', formData.images[i])
+          const originalFile = formData.images[i]
+          const pngFile = await convertImageToPNG(originalFile)
+          formDataToSend.append('images', pngFile)
+          console.log(`Converted ${originalFile.name} (${originalFile.type}) to ${pngFile.name} (${pngFile.type})`)
         }
       }
 
@@ -73,7 +110,9 @@ export default function NeighborhoodForm() {
       }
     } catch (error) {
       console.error('Error submitting form:', error)
-      alert('Something went wrong. Please try again.')
+      // Show specific error message instead of generic "Something went wrong"
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      alert(`Error: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -85,7 +124,9 @@ export default function NeighborhoodForm() {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      handleInputChange("images", Array.from(e.target.files))
+      const files = Array.from(e.target.files)
+      console.log(`Selected ${files.length} images:`, files.map(f => `${f.name} (${f.type})`))
+      handleInputChange("images", files)
     }
   }
 
@@ -243,13 +284,28 @@ export default function NeighborhoodForm() {
                       id="images"
                       type="file"
                       multiple
-                      accept="image/*"
+                      accept="image/*,.heic,.heif,.webp,.avif,.tiff,.tif,.bmp,.svg,.ico,.gif,.apng"
                       onChange={handleImageUpload}
                       className="rounded-xl border-2 border-amber-200 focus:border-amber-400 bg-white/80 text-amber-900 h-12 md:h-12 flex items-center justify-center file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 click-animation text-sm"
                     />
+                    {formData.images && formData.images.length > 0 && (
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-xs text-green-700 font-semibold mb-1">
+                          Selected {formData.images.length} image(s):
+                        </p>
+                        {formData.images.map((file, index) => (
+                          <p key={index} className="text-xs text-green-600">
+                            • {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </p>
+                        ))}
+                        <p className="text-xs text-blue-600 mt-1 italic">
+                          Images will be automatically converted to PNG format before upload
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <p className="text-xs text-amber-600 -mt-2">
-                    Share photos, screenshots, or any images related to your message for Thomas
+                    Share any images (iPhone photos, screenshots, etc.). All formats supported and automatically converted to PNG.
                   </p>
                 </div>
 

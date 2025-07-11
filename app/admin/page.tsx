@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Badge } from "../../components/ui/badge"
 import { Textarea } from "../../components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog"
-import { Lock, Eye, Check, X, Mail, Calendar, User, MessageSquare, LogOut, Clock, TestTube, XCircle } from "lucide-react"
+import { Lock, Eye, Check, X, Mail, Calendar, User, MessageSquare, LogOut, Clock } from "lucide-react"
 import Image from "next/image"
 
 interface AdminMessage {
@@ -152,50 +152,6 @@ export default function AdminPanel() {
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current)
       }
-    }
-  }
-
-  const handleTestEmail = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/admin/test-email', {
-        method: 'POST',
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        alert('Test approval email sent successfully to tmgd.og1@gmail.com!')
-      } else {
-        alert(`Failed to send test approval email: ${data.error}`)
-      }
-    } catch (error) {
-      console.error('Test email error:', error)
-      alert('Failed to send test approval email')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleTestRejectionEmail = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/admin/test-rejection-email', {
-        method: 'POST',
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        alert('Test rejection email sent successfully to tmgd.og1@gmail.com!')
-      } else {
-        alert(`Failed to send test rejection email: ${data.error}`)
-      }
-    } catch (error) {
-      console.error('Test rejection email error:', error)
-      alert('Failed to send test rejection email')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -404,26 +360,6 @@ export default function AdminPanel() {
               {messages.filter(m => !m.isApproved && !m.rejectedAt).length} Pending
             </Badge>
             <Button
-              onClick={handleTestEmail}
-              disabled={loading}
-              variant="outline"
-              className="border-2 border-green-500 text-green-600 hover:bg-green-50 text-sm md:text-base px-3 py-2 md:px-4 md:py-2"
-            >
-              <TestTube className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-              <span className="hidden sm:inline">Test Approval</span>
-              <span className="sm:hidden">Test</span>
-            </Button>
-            <Button
-              onClick={handleTestRejectionEmail}
-              disabled={loading}
-              variant="outline"
-              className="border-2 border-orange-500 text-orange-600 hover:bg-orange-50 text-sm md:text-base px-3 py-2 md:px-4 md:py-2"
-            >
-              <XCircle className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-              <span className="hidden sm:inline">Test Rejection</span>
-              <span className="sm:hidden">Reject</span>
-            </Button>
-            <Button
               onClick={async () => {
                 setLoading(true)
                 console.log('🔥 ADMIN FORCE REFRESH CLICKED!')
@@ -460,29 +396,19 @@ export default function AdminPanel() {
                 }
               }}
               disabled={loading}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm md:text-base px-3 py-2 md:px-4 md:py-2 flex items-center gap-1"
+              className="bg-green-600 hover:bg-green-700 text-white font-bold text-sm md:text-base px-3 py-2 md:px-4 md:py-2 flex items-center gap-1"
             >
               {loading ? (
                 <>
                   <Clock className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
-                  FORCING...
+                  Refreshing...
                 </>
               ) : (
                 <>
                   <Eye className="w-3 h-3 md:w-4 md:h-4" />
-                  🔥 FORCE
+                  Refresh
                 </>
               )}
-            </Button>
-            <Button
-              onClick={() => {
-                console.log('🔥 NUCLEAR REFRESH - Forcing complete page reload!')
-                window.location.reload()
-              }}
-              variant="outline"
-              className="border-2 border-red-500 text-red-600 hover:bg-red-50 text-sm md:text-base px-3 py-2 md:px-4 md:py-2"
-            >
-              🔥 NUCLEAR
             </Button>
             <Button
               onClick={handleLogout}
