@@ -424,19 +424,53 @@ export default function AdminPanel() {
               <span className="sm:hidden">Reject</span>
             </Button>
             <Button
-              onClick={fetchMessages}
+              onClick={async () => {
+                setLoading(true)
+                console.log('🔥 ADMIN FORCE REFRESH CLICKED!')
+                
+                try {
+                  // Use the new admin force-refresh endpoint
+                  const timestamp = Date.now()
+                  const randomId = Math.random().toString(36).substring(2, 15)
+                  const response = await fetch(`/api/admin/force-refresh?t=${timestamp}&r=${randomId}&bust=${Math.random()}`, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    headers: {
+                      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+                      'Pragma': 'no-cache',
+                      'Expires': '0',
+                      'X-Requested-With': 'admin-force-refresh'
+                    }
+                  })
+                  
+                  const data = await response.json()
+
+                  if (data.success) {
+                    setMessages(data.messages)
+                    console.log(`✅ ADMIN FORCE REFRESH SUCCESS! ${data.messages.length} messages loaded at ${new Date().toLocaleTimeString()}`)
+                  } else {
+                    console.error('Admin force refresh failed:', data.error)
+                    alert(data.error || 'Failed to force refresh messages')
+                  }
+                } catch (error) {
+                  console.error('Admin force refresh error:', error)
+                  alert('Failed to force refresh messages')
+                } finally {
+                  setLoading(false)
+                }
+              }}
               disabled={loading}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold text-sm md:text-base px-3 py-2 md:px-4 md:py-2 flex items-center gap-1"
+              className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm md:text-base px-3 py-2 md:px-4 md:py-2 flex items-center gap-1"
             >
               {loading ? (
                 <>
                   <Clock className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
-                  Refreshing...
+                  FORCING...
                 </>
               ) : (
                 <>
                   <Eye className="w-3 h-3 md:w-4 md:h-4" />
-                  FORCE REFRESH
+                  🔥 FORCE
                 </>
               )}
             </Button>

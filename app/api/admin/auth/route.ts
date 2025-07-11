@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,10 +23,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check password hash
-    const isValidPassword = await bcrypt.compare(trimmedPassword, process.env.ADMIN_PASSWORD_HASH || '')
-    
-    if (!isValidPassword) {
+    // Check password (PLAINTEXT - much simpler!)
+    if (trimmedPassword !== process.env.ADMIN_PASSWORD) {
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401 }

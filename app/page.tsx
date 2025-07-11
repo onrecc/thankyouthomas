@@ -134,15 +134,52 @@ export default function Page() {
         {/* MANUAL REFRESH BUTTON */}
         <div className="flex justify-center mb-6">
           <Button 
-            onClick={() => {
+            onClick={async () => {
               setLoading(true)
-              fetchApprovedMessages()
+              console.log('🔥 FORCE REFRESH CLICKED!')
+              
+              try {
+                // Use the new force-refresh endpoint with maximum cache busting
+                const timestamp = Date.now()
+                const randomId = Math.random().toString(36).substring(2, 15)
+                const response = await fetch(`/api/force-refresh?t=${timestamp}&r=${randomId}&bust=${Math.random()}`, {
+                  method: 'GET',
+                  cache: 'no-store',
+                  headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+                    'Pragma': 'no-cache',
+                    'Expires': '0',
+                    'X-Requested-With': 'force-refresh'
+                  }
+                })
+                
+                const data = await response.json()
+                
+                if (data.success) {
+                  const sortedMessages = data.messages.sort((a: ApprovedMessage, b: ApprovedMessage) => {
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                  })
+                  setMessages(sortedMessages)
+                  setFilteredMessages(sortedMessages)
+                  console.log(`✅ FORCE REFRESH SUCCESS! ${sortedMessages.length} messages loaded at ${new Date().toLocaleTimeString()}`)
+                } else {
+                  console.error('Force refresh failed:', data.error)
+                  // Fallback to regular fetch
+                  await fetchApprovedMessages()
+                }
+              } catch (error) {
+                console.error('Force refresh error:', error)
+                // Fallback to regular fetch
+                await fetchApprovedMessages()
+              } finally {
+                setLoading(false)
+              }
             }}
             disabled={loading}
-            className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-xl shadow-lg border-2 border-green-500 transition-all duration-200 hover:scale-105 cursor-pointer text-sm flex items-center gap-2"
+            className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg border-2 border-red-500 transition-all duration-200 hover:scale-105 cursor-pointer text-sm flex items-center gap-2"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'Refreshing...' : 'Refresh Messages'}
+            {loading ? 'FORCE REFRESHING...' : '🔥 FORCE REFRESH'}
           </Button>
         </div>
 
