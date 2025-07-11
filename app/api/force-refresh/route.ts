@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { db } from '../../../lib/firebase-admin'
 
+// Force dynamic rendering - NEVER cache this route
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   try {
     console.log('🔥 FORCE REFRESH TRIGGERED at', new Date().toISOString())

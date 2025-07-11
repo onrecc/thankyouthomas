@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '../../../../lib/firebase-admin'
 
+// Force dynamic rendering - NEVER cache this route
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 function verifyAdminSession(request: NextRequest) {
   const session = request.cookies.get('admin-session')?.value
   
