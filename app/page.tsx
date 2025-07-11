@@ -7,7 +7,7 @@ import MessageCard from "./components/message-card"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Dialog, DialogContent, DialogTrigger } from "../components/ui/dialog"
-import { Heart, MessageSquare, Search, Info } from "lucide-react"
+import { Heart, MessageSquare, Search, Info, RefreshCw } from "lucide-react"
 
 interface ApprovedMessage {
   id: string
@@ -42,16 +42,24 @@ export default function Page() {
 
   const fetchApprovedMessages = async () => {
     try {
-      // Add timestamp to bypass cache
+      // NUCLEAR CACHE BUSTING - multiple techniques to force fresh data
       const timestamp = new Date().getTime()
-      const response = await fetch(`/api/approved-messages?t=${timestamp}`, {
+      const randomId = Math.random().toString(36).substring(2, 15)
+      const response = await fetch(`/api/approved-messages?t=${timestamp}&r=${randomId}&nocache=${Date.now()}`, {
+        method: 'GET',
         cache: 'no-store', // Force no caching
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'If-Modified-Since': '0',
+          'If-None-Match': 'no-match-for-this'
         }
       })
-      const data = await response.json()
+      
+      // Force browser to not cache by cloning response
+      const clonedResponse = response.clone()
+      const data = await clonedResponse.json()
       
       if (data.success) {
         // Sort messages by creation date (newest first)
@@ -60,6 +68,9 @@ export default function Page() {
         })
         setMessages(sortedMessages)
         setFilteredMessages(sortedMessages)
+        console.log(`🔄 Refreshed! Found ${sortedMessages.length} messages at ${new Date().toLocaleTimeString()}`)
+      } else {
+        console.error('API returned error:', data.error)
       }
     } catch (error) {
       console.error('Error fetching messages:', error)
@@ -118,6 +129,21 @@ export default function Page() {
               className="pl-10 pr-4 py-3 md:py-3 rounded-xl border-2 border-amber-200 focus:border-amber-400 bg-white/90 text-amber-900 placeholder:text-amber-600 shadow-lg text-base"
             />
           </div>
+        </div>
+
+        {/* MANUAL REFRESH BUTTON */}
+        <div className="flex justify-center mb-6">
+          <Button 
+            onClick={() => {
+              setLoading(true)
+              fetchApprovedMessages()
+            }}
+            disabled={loading}
+            className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-xl shadow-lg border-2 border-green-500 transition-all duration-200 hover:scale-105 cursor-pointer text-sm flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Refreshing...' : 'Refresh Messages'}
+          </Button>
         </div>
 
         {/* Credits Button */}

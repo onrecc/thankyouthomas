@@ -231,19 +231,28 @@ export default function AdminPanel() {
   const fetchMessages = async () => {
     setLoading(true)
     try {
-      // Add timestamp to bypass cache
+      // NUCLEAR CACHE BUSTING for admin panel
       const timestamp = new Date().getTime()
-      const response = await fetch(`/api/admin/messages?t=${timestamp}`, {
+      const randomId = Math.random().toString(36).substring(2, 15)
+      const response = await fetch(`/api/admin/messages?t=${timestamp}&r=${randomId}&nocache=${Date.now()}&admin=true`, {
+        method: 'GET',
         cache: 'no-store', // Force no caching
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'If-Modified-Since': '0',
+          'If-None-Match': 'no-match-for-this'
         }
       })
-      const data = await response.json()
+      
+      // Force browser to not cache by cloning response
+      const clonedResponse = response.clone()
+      const data = await clonedResponse.json()
 
       if (data.success) {
         setMessages(data.messages)
+        console.log(`🔄 Admin refresh! Found ${data.messages.length} messages at ${new Date().toLocaleTimeString()}`)
       } else {
         alert(data.error || 'Failed to fetch messages')
       }
@@ -417,9 +426,29 @@ export default function AdminPanel() {
             <Button
               onClick={fetchMessages}
               disabled={loading}
-              className="bg-amber-400 hover:bg-amber-500 text-amber-900 text-sm md:text-base px-3 py-2 md:px-4 md:py-2"
+              className="bg-green-600 hover:bg-green-700 text-white font-bold text-sm md:text-base px-3 py-2 md:px-4 md:py-2 flex items-center gap-1"
             >
-              {loading ? 'Refreshing...' : 'Refresh'}
+              {loading ? (
+                <>
+                  <Clock className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <Eye className="w-3 h-3 md:w-4 md:h-4" />
+                  FORCE REFRESH
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => {
+                console.log('🔥 NUCLEAR REFRESH - Forcing complete page reload!')
+                window.location.reload()
+              }}
+              variant="outline"
+              className="border-2 border-red-500 text-red-600 hover:bg-red-50 text-sm md:text-base px-3 py-2 md:px-4 md:py-2"
+            >
+              🔥 NUCLEAR
             </Button>
             <Button
               onClick={handleLogout}

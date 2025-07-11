@@ -24,27 +24,41 @@ export async function GET() {
     
     const response = NextResponse.json({ 
       success: true, 
-      messages 
+      messages,
+      timestamp: new Date().toISOString(),
+      serverTime: Date.now()
     })
 
-    // FORCE NO CACHING - this will prevent Vercel from caching the response
-    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    // NUCLEAR CACHE PREVENTION - every possible header to prevent caching
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0')
     response.headers.set('Pragma', 'no-cache')
     response.headers.set('Expires', '0')
+    response.headers.set('Last-Modified', new Date().toUTCString())
+    response.headers.set('ETag', `"${Date.now()}-${Math.random()}"`)
+    response.headers.set('Vary', '*')
+    response.headers.set('X-Accel-Expires', '0')
+    response.headers.set('X-Cache-Control', 'no-cache')
     
     return response
     
   } catch (error) {
     console.error('Error fetching approved messages:', error)
     const errorResponse = NextResponse.json(
-      { success: false, error: 'Failed to fetch messages' },
+      { 
+        success: false, 
+        error: 'Failed to fetch messages',
+        timestamp: new Date().toISOString(),
+        serverTime: Date.now()
+      },
       { status: 500 }
     )
     
     // No caching for errors either
-    errorResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    errorResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0')
     errorResponse.headers.set('Pragma', 'no-cache')
     errorResponse.headers.set('Expires', '0')
+    errorResponse.headers.set('Last-Modified', new Date().toUTCString())
+    errorResponse.headers.set('ETag', `"${Date.now()}-${Math.random()}"`)
     
     return errorResponse
   }
