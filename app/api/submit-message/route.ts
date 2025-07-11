@@ -14,7 +14,14 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!message || !email) {
       return NextResponse.json(
-        { success: false, error: 'Message and email are required' },
+        { success: false, error: 'Please fill in both your message and email address' },
+        { status: 400 }
+      )
+    }
+
+    if (!email.includes('@')) {
+      return NextResponse.json(
+        { success: false, error: 'Please enter a valid email address' },
         { status: 400 }
       )
     }
@@ -22,7 +29,21 @@ export async function POST(request: NextRequest) {
     // Validate message is not empty
     if (message.trim().length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Message cannot be empty' },
+        { success: false, error: 'Please enter a message' },
+        { status: 400 }
+      )
+    }
+
+    if (message.trim().length < 5) {
+      return NextResponse.json(
+        { success: false, error: 'Please enter a longer message (at least 5 characters)' },
+        { status: 400 }
+      )
+    }
+
+    if (!isAnonymous && (!name || name.trim().length === 0)) {
+      return NextResponse.json(
+        { success: false, error: 'Please enter your name or check "Submit anonymously"' },
         { status: 400 }
       )
     }
@@ -38,15 +59,19 @@ export async function POST(request: NextRequest) {
       // Validate image size (5MB limit)
       if (image.size > 5 * 1024 * 1024) {
         return NextResponse.json(
-          { success: false, error: 'Image size must be less than 5MB' },
+          { success: false, error: `Image is too large (${(image.size / 1024 / 1024).toFixed(1)}MB). Please use an image smaller than 5MB.` },
           { status: 400 }
         )
       }
       
-      // Validate image type
-      if (!image.type.startsWith('image/')) {
+      // Validate image type - be more flexible for mobile uploads
+      const isValidImageType = image.type.startsWith('image/') || 
+                              image.type === '' || // Mobile files often have no type
+                              image.name.match(/\.(jpg|jpeg|png|gif|webp|heic|heif|bmp|tiff)$/i)
+      
+      if (!isValidImageType) {
         return NextResponse.json(
-          { success: false, error: 'Please select a valid image file' },
+          { success: false, error: `"${image.name}" is not a supported image format. Please use JPG, PNG, GIF, WEBP, or HEIC images.` },
           { status: 400 }
         )
       }
@@ -94,8 +119,29 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Error processing form submission:', error)
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('permission')) {
+        return NextResponse.json(
+          { success: false, error: 'Database permission error. Please try again or contact support.' },
+          { status: 500 }
+        )
+      } else if (error.message.includes('network') || error.message.includes('timeout')) {
+        return NextResponse.json(
+          { success: false, error: 'Network error. Please check your internet connection and try again.' },
+          { status: 500 }
+        )
+      } else if (error.message.includes('image') || error.message.includes('file')) {
+        return NextResponse.json(
+          { success: false, error: 'There was an issue processing your image. Please try a different image.' },
+          { status: 400 }
+        )
+      }
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Failed to process submission' },
+      { success: false, error: 'Server error occurred. Please try again in a few minutes.' },
       { status: 500 }
     )
   }

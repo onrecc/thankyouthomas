@@ -25,36 +25,146 @@ export default function NeighborhoodForm() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Helper function to convert image to PNG
-  const convertImageToPNG = (file: File): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      const img = new window.Image()
-      
-      img.onload = () => {
-        canvas.width = img.width
-        canvas.height = img.height
-        ctx?.drawImage(img, 0, 0)
+  // Helper function to convert ALL images to PNG with mobile compatibility
+  const convertImageToPNG = async (file: File): Promise<File> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        console.log(`🔄 Processing image: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`)
         
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const pngFile = new File([blob], `${file.name.split('.')[0]}.png`, {
-              type: 'image/png',
-              lastModified: Date.now()
+        // Detect mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        console.log(`📱 Mobile device detected: ${isMobile}`)
+        
+        // Handle HEIC files specifically (common on iOS)
+        if (file.type === 'image/heic' || file.type === 'image/heif' || 
+            file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') ||
+            file.type === '' && (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif'))) {
+          console.log('� Detected HEIC/HEIF file, converting with heic2any...')
+          try {
+            // Dynamically import heic2any to avoid SSR issues
+            const heic2any = (await import('heic2any')).default
+            
+            const convertedBlob = await heic2any({
+              blob: file,
+              toType: "image/png",
+              quality: 0.8
+            }) as Blob
+            
+            const convertedFile = new File([convertedBlob], file.name.replace(/\.(heic|heif)$/i, '.png'), {
+              type: 'image/png'
             })
-            resolve(pngFile)
-          } else {
-            resolve(file) // Fallback to original file if conversion fails
+            
+            console.log(`✅ HEIC converted: ${file.name} -> ${convertedFile.name} (${(convertedFile.size / 1024 / 1024).toFixed(2)}MB)`)
+            resolve(convertedFile)
+            return
+          } catch (heicError) {
+            console.error('❌ HEIC conversion failed:', heicError)
+            reject(new Error(`Cannot process HEIC file "${file.name}". Please convert to JPG or PNG first, or try taking a new photo in a different format.`))
+            return
           }
-        }, 'image/png', 0.9)
+        }
+        
+        // Handle files with no type (common on mobile)
+        if (!file.type || file.type === '') {
+          console.log('⚠️ File has no type, treating as image...')
+          // Try to determine type from extension
+          const ext = file.name.toLowerCase().split('.').pop()
+          if (!['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext || '')) {
+            reject(new Error(`Unsupported file type for "${file.name}". Please use JPG, PNG, or other common image formats.`))
+            return
+          }
+        }
+        
+        // For all other image types, use canvas conversion with mobile optimizations
+        const img = new window.Image()
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        
+        if (!ctx) {
+          reject(new Error('Canvas not supported on this device'))
+          return
+        }
+        
+        // Mobile-specific settings
+        if (isMobile) {
+          // Enable better image smoothing for mobile
+          ctx.imageSmoothingEnabled = true
+          ctx.imageSmoothingQuality = 'high'
+        }
+        
+        img.crossOrigin = 'anonymous' // Prevent CORS issues
+        
+        img.onload = () => {
+          try {
+            // Calculate new dimensions (smaller for mobile to prevent memory issues)
+            const maxSize = isMobile ? 1280 : 1920
+            let { width, height } = img
+            
+            if (width > height && width > maxSize) {
+              height = (height * maxSize) / width
+              width = maxSize
+            } else if (height > maxSize) {
+              width = (width * maxSize) / height
+              height = maxSize
+            }
+            
+            canvas.width = width
+            canvas.height = height
+            
+            // Clear canvas and draw image
+            ctx.clearRect(0, 0, width, height)
+            ctx.drawImage(img, 0, 0, width, height)
+            
+            // Convert to blob with mobile-optimized quality
+            const quality = isMobile ? 0.7 : 0.8 // Lower quality for mobile to reduce size
+            
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const convertedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.png'), {
+                  type: 'image/png'
+                })
+                console.log(`✅ Canvas converted: ${file.name} -> ${convertedFile.name} (${(convertedFile.size / 1024 / 1024).toFixed(2)}MB)`)
+                resolve(convertedFile)
+              } else {
+                reject(new Error(`Failed to convert "${file.name}". Your device may not support this image format.`))
+              }
+            }, 'image/png', quality)
+          } catch (canvasError) {
+            console.error('❌ Canvas error:', canvasError)
+            reject(new Error(`Failed to process "${file.name}" on your device. Please try a different image.`))
+          }
+        }
+        
+        img.onerror = () => {
+          console.error('❌ Image load error for:', file.name)
+          reject(new Error(`Cannot load image "${file.name}". The file may be corrupted or in an unsupported format.`))
+        }
+        
+        // Create object URL for the image
+        const objectUrl = URL.createObjectURL(file)
+        img.src = objectUrl
+        
+        // Clean up object URL after use (mobile memory management)
+        const cleanup = () => {
+          URL.revokeObjectURL(objectUrl)
+        }
+        
+        // Set cleanup for both success and error cases
+        img.addEventListener('load', cleanup, { once: true })
+        img.addEventListener('error', cleanup, { once: true })
+        
+        // Mobile timeout to prevent hanging
+        if (isMobile) {
+          setTimeout(() => {
+            cleanup()
+            reject(new Error(`Timeout processing "${file.name}". Please try a smaller image.`))
+          }, 15000) // 15 second timeout for mobile
+        }
+        
+      } catch (error) {
+        console.error(`❌ Error converting ${file.name}:`, error)
+        reject(error instanceof Error ? error : new Error(`Unknown error processing "${file.name}"`))
       }
-      
-      img.onerror = () => {
-        resolve(file) // Fallback to original file if loading fails
-      }
-      
-      img.src = URL.createObjectURL(file)
     })
   }
 
@@ -63,6 +173,19 @@ export default function NeighborhoodForm() {
     setIsSubmitting(true)
 
     try {
+      // Validate form data
+      if (!formData.message.trim()) {
+        throw new Error('Please enter a message')
+      }
+      
+      if (!formData.email.trim()) {
+        throw new Error('Please enter your email address')
+      }
+      
+      if (!formData.isAnonymous && !formData.name.trim()) {
+        throw new Error('Please enter your name or check "Submit anonymously"')
+      }
+
       // Create FormData for file upload
       const formDataToSend = new FormData()
       formDataToSend.append('name', formData.isAnonymous ? 'Anonymous' : formData.name)
@@ -72,12 +195,29 @@ export default function NeighborhoodForm() {
       
       // Add images if any - convert to PNG first
       if (formData.images && formData.images.length > 0) {
-        console.log('Converting images to PNG format...')
+        console.log('🔄 Converting images to PNG format...')
         for (let i = 0; i < formData.images.length; i++) {
           const originalFile = formData.images[i]
-          const pngFile = await convertImageToPNG(originalFile)
-          formDataToSend.append('images', pngFile)
-          console.log(`Converted ${originalFile.name} (${originalFile.type}) to ${pngFile.name} (${pngFile.type})`)
+          
+          // Check file size before conversion (max 10MB for original)
+          if (originalFile.size > 10 * 1024 * 1024) {
+            throw new Error(`Image "${originalFile.name}" is too large (${(originalFile.size / 1024 / 1024).toFixed(1)}MB). Please use images smaller than 10MB.`)
+          }
+          
+          try {
+            const pngFile = await convertImageToPNG(originalFile)
+            
+            // Check converted file size (max 5MB for final)
+            if (pngFile.size > 5 * 1024 * 1024) {
+              throw new Error(`Image "${originalFile.name}" is still too large after conversion (${(pngFile.size / 1024 / 1024).toFixed(1)}MB). Please use a smaller image.`)
+            }
+            
+            formDataToSend.append('images', pngFile)
+            console.log(`✅ Added converted image: ${originalFile.name} (${originalFile.type}) -> ${pngFile.name} (${pngFile.type})`)
+          } catch (conversionError) {
+            console.error(`Failed to convert ${originalFile.name}:`, conversionError)
+            throw new Error(`Failed to process image "${originalFile.name}". Please try a different image or contact support.`)
+          }
         }
       }
 
@@ -85,10 +225,30 @@ export default function NeighborhoodForm() {
       const response = await fetch('/api/submit-message', {
         method: 'POST',
         body: formDataToSend,
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       })
 
-      if (response.ok) {
-        const result = await response.json()
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        if (response.status === 413) {
+          throw new Error('Your message or images are too large. Please reduce the size and try again.')
+        } else if (response.status === 400) {
+          throw new Error(errorData.error || 'Please check your message and try again.')
+        } else if (response.status === 500) {
+          throw new Error('Server error. Please try again in a few minutes.')
+        } else {
+          throw new Error(errorData.error || 'Failed to submit message. Please try again.')
+        }
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
         // Reset form
         setFormData({
           name: "",
@@ -105,13 +265,11 @@ export default function NeighborhoodForm() {
         // Show success message
         alert(result.message || 'Your message has been sent successfully! It will be reviewed for approval.')
       } else {
-        const result = await response.json()
-        throw new Error(result.error || 'Failed to submit message')
+        throw new Error(result.error || 'Failed to submit message. Please try again.')
       }
     } catch (error) {
-      console.error('Error submitting form:', error)
-      // Show specific error message instead of generic "Something went wrong"
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      console.error('Error submitting message:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Something went wrong. Please try again.'
       alert(`Error: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
@@ -125,7 +283,31 @@ export default function NeighborhoodForm() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files)
-      console.log(`Selected ${files.length} images:`, files.map(f => `${f.name} (${f.type})`))
+      console.log(`📱 Selected ${files.length} images:`, files.map(f => `${f.name} (${f.type || 'no type'})`))
+      
+      // Mobile device detection
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      
+      // Check for mobile-specific issues
+      if (isMobile) {
+        console.log('📱 Mobile device detected - applying mobile-specific handling')
+        
+        // Check for files without type (common on mobile)
+        const filesWithoutType = files.filter(f => !f.type || f.type === '')
+        if (filesWithoutType.length > 0) {
+          console.log('⚠️ Files without type detected:', filesWithoutType.map(f => f.name))
+        }
+        
+        // Check for HEIC files
+        const heicFiles = files.filter(f => 
+          f.type === 'image/heic' || f.type === 'image/heif' || 
+          f.name.toLowerCase().endsWith('.heic') || f.name.toLowerCase().endsWith('.heif')
+        )
+        if (heicFiles.length > 0) {
+          console.log('📱 HEIC files detected:', heicFiles.map(f => f.name))
+        }
+      }
+      
       handleInputChange("images", files)
     }
   }
