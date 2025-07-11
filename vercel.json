@@ -1,0 +1,29 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "regions": ["sfo1"],
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "FIREBASE_PROJECT_ID": "@firebase_project_id",
+    "FIREBASE_PRIVATE_KEY_ID": "@firebase_private_key_id", 
+    "FIREBASE_PRIVATE_KEY": "@firebase_private_key",
+    "FIREBASE_CLIENT_EMAIL": "@firebase_client_email",
+    "FIREBASE_CLIENT_ID": "@firebase_client_id",
+    "FIREBASE_STORAGE_BUCKET": "@firebase_storage_bucket",
+    "ADMIN_USERNAME": "@admin_username",
+    "ADMIN_PASSWORD_HASH": "@admin_password_hash",
+    "SMTP_HOST": "@smtp_host",
+    "SMTP_PORT": "@smtp_port",
+    "SMTP_SECURE": "@smtp_secure",
+    "SMTP_USER": "@smtp_user",
+    "SMTP_PASS": "@smtp_pass",
+    "SMTP_FROM_NAME": "@smtp_from_name",
+    "SMTP_FROM_EMAIL": "@smtp_from_email"
+  }
+}

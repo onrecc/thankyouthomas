@@ -9,8 +9,10 @@ import { Label } from "../../components/ui/label"
 import { Textarea } from "../../components/ui/textarea"
 import { Card, CardContent } from "../../components/ui/card"
 import { Checkbox } from "../../components/ui/checkbox"
-import { Mail, User, MessageSquare, ImageIcon, AlertCircle } from "lucide-react"
+import { Mail, User, MessageSquare, ImageIcon, AlertCircle, ArrowLeft, Info } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
+import { Dialog, DialogContent, DialogTrigger } from "../../components/ui/dialog"
 
 export default function NeighborhoodForm() {
   const [formData, setFormData] = useState({
@@ -49,6 +51,7 @@ export default function NeighborhoodForm() {
       })
 
       if (response.ok) {
+        const result = await response.json()
         // Reset form
         setFormData({
           name: "",
@@ -57,10 +60,16 @@ export default function NeighborhoodForm() {
           images: null,
           isAnonymous: false,
         })
+        // Clear file input
+        const fileInput = document.getElementById('images') as HTMLInputElement
+        if (fileInput) {
+          fileInput.value = ''
+        }
         // Show success message
-        alert('Your message has been sent successfully! Thank you for your kind words.')
+        alert(result.message || 'Your message has been sent successfully! It will be reviewed for approval.')
       } else {
-        throw new Error('Failed to submit message')
+        const result = await response.json()
+        throw new Error(result.error || 'Failed to submit message')
       }
     } catch (error) {
       console.error('Error submitting form:', error)
@@ -81,7 +90,7 @@ export default function NeighborhoodForm() {
   }
 
   return (
-    <>
+    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: "#E8D5C4" }}>
       {/* Animation Styles */}
       <style jsx global>{`
         .click-animation {
@@ -122,28 +131,27 @@ export default function NeighborhoodForm() {
           <Image src="/neighborhood-bg.png" alt="Neighborhood background" fill className="object-cover" priority />
         </div>
 
-        {/* Logo */}
-        <div className="absolute top-8 left-8 z-10 click-animation">
-          <div className="bg-white/90 p-8 rounded-2xl shadow-lg border-2 border-amber-200">
-            <Image src="/logo.png" alt="Logo" width={200} height={200} className="object-contain" />
-          </div>
-        </div>
-
-        {/* Approval Banner */}
-        <div className="absolute top-8 right-8 z-10">
-          <div className="bg-orange-100 border-2 border-orange-300 text-orange-800 px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 max-w-sm">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="text-base font-medium">All submissions subject to approval</span>
-          </div>
-        </div>
-
         {/* Main Content */}
-        <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-          <Card className="w-full max-w-md shadow-2xl border-0" style={{ backgroundColor: "#F5F0E8" }}>
-            <CardContent className="p-5">
+        <div className="relative z-10 flex flex-col items-center justify-start min-h-screen p-4 pt-8">
+          {/* Logo at the very top */}
+          <div className="mb-4 click-animation">
+            <Image src="/logo.png" alt="Logo" width={200} height={200} className="md:w-[280px] md:h-[280px] object-contain" />
+          </div>
+
+          {/* Approval Banner */}
+          <div className="mb-6 max-w-sm">
+            <div className="bg-orange-100 border-2 border-orange-300 text-orange-800 px-4 py-3 rounded-xl shadow-lg flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-medium">All submissions subject to approval</span>
+            </div>
+          </div>
+
+          {/* Form Card */}
+          <Card className="w-full max-w-md shadow-2xl border-2 border-amber-200" style={{ backgroundColor: "#F5F0E8" }}>
+            <CardContent className="p-6">
               {/* Header */}
-              <div className="text-center mb-5">
-                <h1 className="text-3xl font-bold text-amber-900 mb-2" style={{ fontFamily: "Comic Sans MS, cursive" }}>
+              <div className="text-center mb-6">
+                <h1 className="text-2xl md:text-3xl font-bold text-amber-900 mb-3" style={{ fontFamily: "Comic Sans MS, cursive" }}>
                   Thank You Thomas!
                 </h1>
                 <p className="text-amber-700 text-sm leading-relaxed">
@@ -151,7 +159,7 @@ export default function NeighborhoodForm() {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Name Field */}
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-amber-900 font-semibold flex items-center gap-2 text-sm">
@@ -164,7 +172,7 @@ export default function NeighborhoodForm() {
                     placeholder="What should we call you?"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
-                    className="rounded-xl border-2 border-amber-200 focus:border-amber-400 bg-white/80 text-amber-900 placeholder:text-amber-600 h-9 text-sm input-focus click-animation"
+                    className="rounded-xl border-2 border-amber-200 focus:border-amber-400 bg-white/80 text-amber-900 placeholder:text-amber-600 h-10 md:h-9 text-sm input-focus click-animation"
                     required={!formData.isAnonymous}
                     disabled={formData.isAnonymous}
                   />
@@ -200,9 +208,12 @@ export default function NeighborhoodForm() {
                     placeholder="your.email@example.com"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
-                    className="rounded-xl border-2 border-amber-200 focus:border-amber-400 bg-white/80 text-amber-900 placeholder:text-amber-600 h-9 text-sm input-focus click-animation"
+                    className="rounded-xl border-2 border-amber-200 focus:border-amber-400 bg-white/80 text-amber-900 placeholder:text-amber-600 h-10 md:h-9 text-sm input-focus click-animation"
                     required
                   />
+                  <p className="text-xs text-amber-600">
+                    (Email will not be shown publicly, just to contact you!)
+                  </p>
                 </div>
 
                 {/* Message Field */}
@@ -216,7 +227,7 @@ export default function NeighborhoodForm() {
                     placeholder="Share your appreciation, memories, or thanks for Thomas's work in organizing our neighborhood community!"
                     value={formData.message}
                     onChange={(e) => handleInputChange("message", e.target.value)}
-                    className="rounded-xl border-2 border-amber-200 focus:border-amber-400 bg-white/80 text-amber-900 placeholder:text-amber-600 min-h-[80px] resize-none text-sm input-focus click-animation"
+                    className="rounded-xl border-2 border-amber-200 focus:border-amber-400 bg-white/80 text-amber-900 placeholder:text-amber-600 min-h-[100px] md:min-h-[80px] resize-none text-sm input-focus click-animation"
                     required
                   />
                 </div>
@@ -234,7 +245,7 @@ export default function NeighborhoodForm() {
                       multiple
                       accept="image/*"
                       onChange={handleImageUpload}
-                      className="rounded-xl border-2 border-amber-200 focus:border-amber-400 bg-white/80 text-amber-900 h-12 flex items-center justify-center file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 click-animation text-sm"
+                      className="rounded-xl border-2 border-amber-200 focus:border-amber-400 bg-white/80 text-amber-900 h-12 md:h-12 flex items-center justify-center file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 click-animation text-sm"
                     />
                   </div>
                   <p className="text-xs text-amber-600 -mt-2">
@@ -247,7 +258,7 @@ export default function NeighborhoodForm() {
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full h-12 text-base font-bold rounded-2xl shadow-lg transition-all duration-200 button-click disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-12 md:h-12 text-base font-bold rounded-2xl shadow-lg transition-all duration-200 button-click disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       backgroundColor: isSubmitting ? "#E6C547" : "#F4D03F",
                       color: "#8B4513",
@@ -265,10 +276,65 @@ export default function NeighborhoodForm() {
                   </Button>
                 </div>
               </form>
+
+              {/* Back Button */}
+              <div className="mt-6 text-center space-y-4">
+                <Link href="/">
+                  <Button 
+                    className="bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold px-6 py-3 rounded-xl shadow-lg border-2 border-amber-300 transition-all duration-200 hover:scale-105 cursor-pointer text-sm"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Messages
+                  </Button>
+                </Link>
+                
+                {/* Credits Button */}
+                <div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl shadow-lg border-2 border-amber-500 transition-all duration-200 hover:scale-105 cursor-pointer text-sm"
+                      >
+                        <Info className="w-4 h-4 mr-2" />
+                        Credits
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md bg-amber-50 border-2 border-amber-200">
+                      <div className="text-center p-4">
+                        <h2 className="text-2xl font-bold text-amber-900 mb-6" style={{ fontFamily: "Comic Sans MS, cursive" }}>
+                          Credits
+                        </h2>
+                        <div className="space-y-4 text-amber-800">
+                          <div>
+                            <h3 className="font-bold text-lg mb-1">Site:</h3>
+                            <p className="text-base">TM1988</p>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-lg mb-1">Idea:</h3>
+                            <p className="text-base">AERESAL</p>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-lg mb-1">Domain:</h3>
+                            <p className="text-base">Onrecc</p>
+                          </div>
+                        </div>
+                        <div className="mt-6 pt-4 border-t border-amber-200">
+                          <p className="text-sm text-amber-600">
+                            Made with ❤️ for Thomas Stubblefield
+                          </p>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
             </CardContent>
           </Card>
+
+          {/* Extra spacing at bottom */}
+          <div className="h-8"></div>
         </div>
       </div>
-    </>
+    </div>
   )
 }

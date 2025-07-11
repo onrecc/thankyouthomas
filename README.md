@@ -11,7 +11,8 @@ A heartfelt message collection platform where people can send messages, images, 
 - 📱 **Responsive Design**: Mobile-first responsive design with Tailwind CSS
 - 🎨 **Beautiful UI**: Modern design with shadcn/ui components
 - 🚀 **Next.js**: Server-side rendering and optimized performance
-- ☁️ **API Routes**: Built-in API routes for form submission
+- ☁️ **Firebase Integration**: Firestore database and Cloud Storage
+- 🔐 **Approval System**: All messages require approval (isApproved field)
 
 ## Tech Stack
 
@@ -19,8 +20,8 @@ A heartfelt message collection platform where people can send messages, images, 
 - **TypeScript**: Type safety and better development experience
 - **Tailwind CSS**: Utility-first CSS framework
 - **shadcn/ui**: Beautiful, accessible UI components
+- **Firebase Admin SDK**: Server-side Firebase integration
 - **Lucide React**: Modern icon library
-- **React Hook Form**: Performant form handling
 
 ## Setup Instructions
 
@@ -29,14 +30,195 @@ A heartfelt message collection platform where people can send messages, images, 
 npm install
 ```
 
-### 2. Development Server
+### 2. Firebase Setup
+1. Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Enable Firestore Database
+3. Enable Storage
+4. Go to Project Settings > Service accounts
+5. Click "Generate new private key" and download the JSON file
+6. Edit the `.env.local` file in the project root and fill in your Firebase configuration using values from the downloaded JSON file
+
+### 3. Firebase Security Rules
+
+#### Firestore Rules
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /responses/{document} {
+      allow read, write: if false; // Only server-side access
+    }
+  }
+}
+```
+
+#### Storage Rules
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /responses/{allPaths=**} {
+      allow read: if true; // Public read access for images
+      allow write: if false; // Only server-side write access
+    }
+  }
+}
+```
+
+### 4. Development Server
 ```bash
 npm run dev
 ```
 
-The application will be available at http://localhost:3000
+The application will be available at:
+- **Home page**: http://localhost:3000
+- **Form page**: http://localhost:3000/form
 
-### 3. Production Build
+### 5. Production Build
+```bash
+npm run build
+npm start
+```
+
+## File Structure
+
+```
+thankyouthomas/
+├── app/
+│   ├── api/submit-message/
+│   │   └── route.ts        # API route for form submission with Firebase
+│   ├── components/
+│   │   └── neighborhood-form.tsx  # Main form component
+│   ├── form/
+│   │   └── page.tsx        # Form page (/form)
+│   ├── globals.css         # Global styles with Tailwind
+│   ├── layout.tsx          # Root layout component
+│   └── page.tsx            # Home page (empty with background)
+├── components/
+│   └── ui/                 # shadcn/ui components
+├── lib/
+│   ├── utils.ts            # Utility functions
+│   └── firebase-admin.ts   # Firebase Admin SDK configuration
+├── public/                 # Static assets (images, legacy files)
+├── .env.local              # Environment variables (not in git)
+├── .gitignore              # Git ignore file
+├── server.js               # Legacy Express server (if needed)
+├── package.json            # Dependencies
+├── tailwind.config.js      # Tailwind configuration
+├── tsconfig.json           # TypeScript configuration
+└── README.md               # This file
+```
+
+## Data Structure
+
+Messages are stored in the `responses` collection with the following structure:
+
+```javascript
+{
+  message: "Thank you for everything, Thomas!",
+  name: "John Doe", // or "Anonymous"
+  email: "john@example.com",
+  isAnonymous: false,
+  imageUrl: "https://storage.googleapis.com/...", // if image uploaded
+  timestamp: firestore.FieldValue.serverTimestamp(),
+  createdAt: "2024-01-01T12:00:00.000Z",
+  isApproved: false // Default false, requires manual approval
+}
+```
+
+## Form Features
+
+- **Name Field**: Optional, disabled when anonymous is selected
+- **Email Field**: Required for contact purposes
+- **Message Field**: Rich textarea with placeholder guidance
+- **Image Upload**: Multiple file selection with preview
+- **Anonymous Toggle**: Checkbox to submit without name
+- **Submit Button**: Loading state with spinner animation
+- **Responsive Design**: Works perfectly on all screen sizes
+
+## API Integration
+
+The form submits to `/api/submit-message` which:
+- Validates form data
+- Uploads images to Firebase Storage
+- Saves data to Firestore with `isApproved: false`
+- Returns success/error responses
+
+## Customization
+
+- **Colors**: Modify the warm amber/brown color scheme in the component
+- **Form Fields**: Add/remove fields in `neighborhood-form.tsx`
+- **Styling**: Customize Tailwind classes and CSS variables
+- **Components**: Extend or modify shadcn/ui components
+- **API Logic**: Update the API route in `app/api/submit-message/route.ts`
+
+## Development
+
+- **Hot Reload**: Development server supports hot reloading
+- **TypeScript**: Full type safety and IntelliSense
+- **ESLint**: Code linting for consistent code quality
+- **Environment Variables**: Secure Firebase configuration
+
+## Legacy Support
+
+The original `form.html` and `form.js` files are preserved in the `public/` directory for reference. The Express server (`server.js`) is also maintained for backward compatibility if needed.
+
+---
+
+Made with ❤️ for Thomas using modern web technologies
+
+## Setup Instructions
+
+### 1. Install Dependencies
+```bash
+npm install
+```
+
+### 2. Firebase Setup
+1. Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Enable Firestore Database
+3. Enable Storage
+4. Go to Project Settings > Service accounts
+5. Click "Generate new private key" and download the JSON file
+6. Edit the `.env.local` file in the project root and fill in your Firebase configuration using values from the downloaded JSON file
+
+### 3. Firebase Security Rules
+
+#### Firestore Rules
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /responses/{document} {
+      allow read, write: if false; // Only server-side access
+    }
+  }
+}
+```
+
+#### Storage Rules
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /responses/{allPaths=**} {
+      allow read: if true; // Public read access for images
+      allow write: if false; // Only server-side write access
+    }
+  }
+}
+```
+
+### 4. Development Server
+```bash
+npm run dev
+```
+
+The application will be available at:
+- **Home page**: http://localhost:3000
+- **Form page**: http://localhost:3000/form
+
+### 5. Production Build
 ```bash
 npm run build
 npm start
@@ -62,22 +244,44 @@ This project has been migrated from:
 thankyouthomas/
 ├── app/
 │   ├── api/submit-message/
-│   │   └── route.ts        # API route for form submission
+│   │   └── route.ts        # API route for form submission with Firebase
 │   ├── components/
 │   │   └── neighborhood-form.tsx  # Main form component
+│   ├── form/
+│   │   └── page.tsx        # Form page (/form)
 │   ├── globals.css         # Global styles with Tailwind
 │   ├── layout.tsx          # Root layout component
-│   └── page.tsx            # Home page
+│   └── page.tsx            # Home page (empty with background)
 ├── components/
 │   └── ui/                 # shadcn/ui components
 ├── lib/
-│   └── utils.ts            # Utility functions
-├── public/                 # Static assets (images, etc.)
+│   ├── utils.ts            # Utility functions
+│   └── firebase-admin.ts   # Firebase Admin SDK configuration
+├── public/                 # Static assets (images, legacy files)
+├── .env.local              # Environment variables (not in git)
+├── .gitignore              # Git ignore file
 ├── server.js               # Legacy Express server (if needed)
 ├── package.json            # Dependencies
 ├── tailwind.config.js      # Tailwind configuration
 ├── tsconfig.json           # TypeScript configuration
 └── README.md               # This file
+```
+
+## Data Structure
+
+Messages are stored in the `responses` collection with the following structure:
+
+```javascript
+{
+  message: "Thank you for everything, Thomas!",
+  name: "John Doe", // or "Anonymous"
+  email: "john@example.com",
+  isAnonymous: false,
+  imageUrl: "https://storage.googleapis.com/...", // if image uploaded
+  timestamp: firestore.FieldValue.serverTimestamp(),
+  createdAt: "2024-01-01T12:00:00.000Z",
+  isApproved: false // Default false, requires manual approval
+}
 ```
 
 ## Form Features
